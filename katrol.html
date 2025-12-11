@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katrol Nilai Dinamis Siswa (Dukungan XLSX)</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* --- Kode CSS (Inline) --- */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            color: #007bff;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        h2 {
+            color: #28a745;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            font-size: 1.2em;
+        }
+        
+        h3 {
+             margin-top: 20px;
+             color: #007bff;
+        }
+
+        p {
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .action-buttons button {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group-inline {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group-inline .input-group {
+            flex: 1;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.0em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        /* Gaya khusus untuk tombol Unduh dan Upload */
+        #downloadTemplate { background-color: #17a2b8; }
+        #downloadTemplate:hover { background-color: #138496; }
+        #uploadFile { background-color: #6c757d; }
+        #uploadFile:hover { background-color: #5a6268; }
+
+
+        .result-section {
+            margin-top: 20px;
+            border-top: 2px solid #ccc;
+            padding-top: 20px;
+        }
+        
+        .result-stats {
+            background-color: #e9f7ee;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-inline {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .stats-item {
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+        .stats-item strong {
+            display: block;
+            font-size: 1.2em;
+            color: #28a745;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        td {
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        .text-right {
+            text-align: right;
+        }
+        
+        .keterangan-konversi {
+            font-style: italic;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Katrol Nilai Dinamis Siswa</h1>
+        <p>Aplikasi untuk mengkonversi (rescaling) daftar nilai siswa dari rentang asli ke rentang target yang baru. **Mendukung file XLSX/XLS.**</p>
+
+        <h3>Aksi File Data (XLSX/XLS)</h3>
+        <div class="action-buttons">
+            <button id="downloadTemplate" onclick="unduhTemplatXLSX()">Unduh Templat Nilai (XLSX)</button>
+            <input type="file" id="xlsFileInput" accept=".xlsx, .xls" style="display: none;">
+            <button id="uploadFile" onclick="document.getElementById('xlsFileInput').click()">Upload File XLSX/XLS</button>
+        </div>
+        
+        <h3>Rentang Nilai Diharapkan (Target)</h3>
+        <p>Tentukan batas nilai terendah dan tertinggi yang Anda inginkan setelah konversi dilakukan.</p>
+        <div class="input-group-inline">
+            <div class="input-group">
+                <label for="nilaiTerendahTarget">Terendah Target (Misal: 60):</label>
+                <input type="number" id="nilaiTerendahTarget" value="60" min="0">
+            </div>
+            <div class="input-group">
+                <label for="nilaiTertinggiTarget">Tertinggi Target (Misal: 100):</label>
+                <input type="number" id="nilaiTertinggiTarget" value="100" min="0">
+            </div>
+        </div>
+        
+        <button onclick="hitungKatrolDinamis()">Proses Konversi Nilai</button>
+
+        <div class="result-section">
+            <h3 id="resultTitle" style="display: none;">Hasil Konversi</h3>
+            
+            <div class="result-stats" id="statsContainer" style="display: none;">
+                <h4>Statistik Nilai</h4>
+                <div class="stats-inline">
+                    <div class="stats-item">Nilai Terendah **Asli** <br> <strong><span id="minAsli"></span></strong></div>
+                    <div class="stats-item">Nilai Tertinggi **Asli** <br> <strong><span id="maxAsli"></span></strong></div>
+                    <div class="stats-item">Rentang Konversi Target <br> <strong><span id="rentangTargetInfo"></span></strong></div>
+                </div>
+            </div>
+            
+            <p class="keterangan-konversi" id="keteranganKonversi" style="display: none;"></p>
+
+            <div id="tableContainer">
+                </div>
+            
+            <button id="downloadResult" onclick="unduhHasilXLSX()" style="display: none; margin-top: 20px;">Unduh Hasil Konversi (XLSX)</button>
+            
+        </div>
+        
+    </div>
+
+    <script>
+        /* --- Kode JavaScript (Inline) --- */
+        let dataSiswa = []; // Variabel global untuk menyimpan data siswa yang di-upload
+        let dataKonversi = []; // Variabel global untuk menyimpan hasil konversi
+
+        /**
+         * Mengunduh templat XLSX.
+         */
+        function unduhTemplatXLSX() {
+            // Data yang akan dimasukkan ke dalam sheet
+            const data = [
+                ["Nama", "NilaiMurni"],
+                ["Andi", 75],
+                ["Budi", 45],
+                ["Citra", 90]
+            ];
+            
+            // Buat worksheet dari array data
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Buat workbook dan tambahkan worksheet
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Daftar Nilai");
+            
+            // Tulis file dan unduh
+            XLSX.writeFile(wb, "templat_nilai_siswa.xlsx");
+        }
+        
+        /**
+         * Membaca dan memproses file XLSX/XLS yang di-upload.
+         */
+        document.getElementById('xlsFileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Asumsi data berada di sheet pertama
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // Konversi sheet ke array JSON
+                    const jsonArr = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    // Format ulang data
+                    dataSiswa = jsonArr.map(row => ({
+                        nama: row.Nama ? String(row.Nama).trim() : 'Nama Kosong',
+                        nilaiMurni: parseFloat(row.NilaiMurni)
+                    })).filter(item => !isNaN(item.nilaiMurni)); // Filter baris yang tidak valid nilainya
+
+                    if (dataSiswa.length === 0) {
+                        alert('Gagal memproses file. Pastikan ada data dan kolom "Nama" serta "NilaiMurni" ada di baris pertama.');
+                        return;
+                    }
+
+                    alert(`Data ${dataSiswa.length} siswa berhasil di-upload.`);
+                    // Reset tampilan hasil
+                    document.getElementById('resultTitle').style.display = 'none';
+                    document.getElementById('statsContainer').style.display = 'none';
+                    document.getElementById('tableContainer').innerHTML = '';
+                    document.getElementById('downloadResult').style.display = 'none';
+
+                } catch (error) {
+                    alert('Gagal memproses file Excel. Pastikan file tidak rusak dan format kolom benar (Nama, NilaiMurni).');
+                    console.error("XLSX Parsing Error:", error);
+                }
+            };
+            reader.readAsArrayBuffer(file); 
+        });
+
+
+        /**
+         * Logika inti untuk menghitung dan mengkonversi nilai secara dinamis.
+         */
+        function hitungKatrolDinamis() {
+            if (dataSiswa.length === 0) {
+                alert("Harap unduh templat, isi datanya, dan upload file XLSX/XLS terlebih dahulu.");
+                return;
+            }
+            
+            // 1. Ambil Nilai Target dari Input
+            const nilaiTerendahTarget = parseFloat(document.getElementById('nilaiTerendahTarget').value);
+            const nilaiTertinggiTarget = parseFloat(document.getElementById('nilaiTertinggiTarget').value);
+            
+            if (isNaN(nilaiTerendahTarget) || isNaN(nilaiTertinggiTarget) || nilaiTertinggiTarget <= nilaiTerendahTarget) {
+                 alert("Harap masukkan Nilai Target yang valid (Tertinggi harus lebih besar dari Terendah).");
+                 return;
+            }
+
+            // 2. Tentukan Rentang Awal (Otomatis dari Data Siswa)
+            const semuaNilaiMurni = dataSiswa.map(d => d.nilaiMurni);
+            const minNilaiAsli = Math.min(...semuaNilaiMurni);
+            const maxNilaiAsli = Math.max(...semuaNilaiMurni);
+            const rentangAwal = maxNilaiAsli - minNilaiAsli;
+            const rentangTarget = nilaiTertinggiTarget - nilaiTerendahTarget;
+
+            // Validasi Rentang Awal
+            if (rentangAwal === 0) {
+                alert("Error: Semua Nilai Murni sama, tidak bisa dilakukan konversi (rescaling).");
+                return;
+            }
+            
+            // 3. Lakukan Perhitungan Konversi untuk Setiap Siswa
+            dataKonversi = dataSiswa.map(siswa => {
+                let nilaiTerkatrol;
+                
+                // Rumus Rescaling / Interpolasi Linear:
+                // NilaiBaru = TerendahTarget + ((NilaiMurni - TerendahAwal) * (RentangTarget / RentangAwal))
+                nilaiTerkatrol = nilaiTerendahTarget + 
+                                 (siswa.nilaiMurni - minNilaiAsli) * (rentangTarget / rentangAwal);
+                
+                // Batasi (Clamp) nilai agar tidak melebihi batas target
+                const nilaiAkhir = Math.min(Math.max(nilaiTerkatrol, nilaiTerendahTarget), nilaiTertinggiTarget);
+
+                return {
+                    nama: siswa.nama,
+                    nilaiMurni: siswa.nilaiMurni,
+                    nilaiKonversi: parseFloat(nilaiAkhir.toFixed(2)),
+                    perbedaan: parseFloat((nilaiAkhir - siswa.nilaiMurni).toFixed(2))
+                };
+            });
+            
+            // 4. Hitung Statistik Hasil Konversi
+            const semuaNilaiKonversi = dataKonversi.map(d => d.nilaiKonversi);
+            const minKonversi = Math.min(...semuaNilaiKonversi);
+            const maxKonversi = Math.max(...semuaNilaiKonversi);
+
+
+            // 5. Tampilkan Hasil
+            tampilkanHasil(minNilaiAsli, maxNilaiAsli, minKonversi, maxKonversi, nilaiTerendahTarget, nilaiTertinggiTarget);
+            
+            // Menampilkan tombol unduh hasil konversi
+            document.getElementById('downloadResult').style.display = 'block';
+        }
+
+        /**
+         * Menampilkan statistik dan tabel hasil konversi.
+         */
+        function tampilkanHasil(minAsli, maxAsli, minKonversi, maxKonversi, targetMin, targetMax) {
+            
+            document.getElementById('resultTitle').style.display = 'block';
+            document.getElementById('statsContainer').style.display = 'block';
+
+            // Update Statistik
+            document.getElementById('minAsli').textContent = minAsli.toFixed(2);
+            document.getElementById('maxAsli').textContent = maxAsli.toFixed(2);
+            document.getElementById('rentangTargetInfo').textContent = `${targetMin} - ${targetMax}`;
+            
+            // Keterangan Konversi
+            const keteranganElement = document.getElementById('keteranganKonversi');
+            keteranganElement.style.display = 'block';
+            keteranganElement.innerHTML = `**Konversi otomatis** menggunakan Rentang Asli **${minAsli.toFixed(2)}-${maxAsli.toFixed(2)}** dan Rentang Target **${targetMin}-${targetMax}**. Nilai yang dikonversi berada di Rentang Hasil **${minKonversi.toFixed(2)}-${maxKonversi.toFixed(2)}**.`;
+
+            // Buat Tabel
+            let tableHTML = '<table>';
+            tableHTML += '<thead><tr><th>No</th><th>Nama Siswa</th><th class="text-center">Nilai Murni</th><th class="text-center">Nilai Konversi</th><th class="text-center">Perbedaan</th></tr></thead>';
+            tableHTML += '<tbody>';
+
+            dataKonversi.forEach((data, index) => {
+                const warnaPerbedaan = data.perbedaan > 0 ? 'style="color: green; font-weight: bold;"' :
+                                       data.perbedaan < 0 ? 'style="color: red; font-weight: bold;"' : '';
+                                       
+                tableHTML += `<tr>
+                                <td>${index + 1}</td>
+                                <td>${data.nama}</td>
+                                <td class="text-center">${data.nilaiMurni.toFixed(2)}</td>
+                                <td class="text-center" style="font-weight: bold;">${data.nilaiKonversi.toFixed(2)}</td>
+                                <td class="text-center" ${warnaPerbedaan}>${data.perbedaan > 0 ? '+' : ''}${data.perbedaan.toFixed(2)}</td>
+                              </tr>`;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('tableContainer').innerHTML = tableHTML;
+        }
+
+        /**
+         * Mengunduh hasil konversi ke dalam file XLSX baru.
+         */
+        function unduhHasilXLSX() {
+             if (dataKonversi.length === 0) {
+                 alert("Tidak ada data hasil konversi untuk diunduh.");
+                 return;
+             }
+             
+             // Siapkan data untuk Excel
+             const dataExport = [
+                 ["No", "Nama", "Nilai Murni", "Nilai Konversi", "Perbedaan"]
+             ];
+
+             dataKonversi.forEach((item, index) => {
+                 dataExport.push([
+                     index + 1,
+                     item.nama,
+                     item.nilaiMurni,
+                     item.nilaiKonversi,
+                     item.perbedaan
+                 ]);
+             });
+
+             // Buat worksheet
+             const ws = XLSX.utils.aoa_to_sheet(dataExport);
+             
+             // Buat workbook dan tambahkan worksheet
+             const wb = XLSX.utils.book_new();
+             XLSX.utils.book_append_sheet(wb, ws, "Hasil Konversi");
+             
+             // Tulis file dan unduh
+             XLSX.writeFile(wb, "hasil_konversi_nilai.xlsx");
+        }
+    </script>
+</body>
+</html>
